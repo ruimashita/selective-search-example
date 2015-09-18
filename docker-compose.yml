@@ -1,0 +1,9 @@
+web:
+  build: .
+  command: /bin/bash
+  # ports:
+  #   - "8787:8787"
+  volumes:
+    - .:/var/selective-search
+  # environment:
+  #   LANG: ja_JP.UTF-8
