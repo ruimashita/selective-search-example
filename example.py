@@ -1,24 +1,27 @@
 # -*- coding: utf-8 -*-
-
 import matplotlib
 # Force matplotlib to not use any Xwindows backend.
 matplotlib.use('Agg')
 
+import glob
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
-import selectivesearch
-from selectivesearch import *
-
-from PIL import Image
 import numpy
+import os.path
+from PIL import Image
+import selectivesearch
+# from selectivesearch import *
 
-SELECTIVESEARCH_SCALE = 255.0  # 1 ~ 255
-SELECTIVESEARCH_SIGMA = 0.1
-SELECTIVESEARCH_MIN_SIZE = 10*10
+"""
+https://github.com/scikit-image/scikit-image/blob/master/skimage/segmentation/_felzenszwalb_cy.pyx
+"""
+SELECTIVESEARCH_SCALE = 100  # 255.0*3  # 1 ~ 255 ?
+SELECTIVESEARCH_SIGMA = 2.2  # Gaussian filter
+SELECTIVESEARCH_MIN_SIZE = 10
 
 
 def main(image_path):
-    image = Image.open(image_path)
+    input_file_name = os.path.basename(image_path)
     image_array = pre_selective(image_path)
 
     candidates = selective(image_path)
@@ -32,7 +35,18 @@ def main(image_path):
         ax.add_patch(rect)
 
     # plt.show()
-    plt.savefig("data/result.png")
+
+    out_file = "data/result/{0}.png".format(input_file_name)
+    out_file = "data/result/scale_{0}__sigma_{1}__minsize__{2}/{3}.png".format(
+        SELECTIVESEARCH_SCALE,
+        SELECTIVESEARCH_SIGMA,
+        SELECTIVESEARCH_MIN_SIZE,
+        input_file_name
+    )
+    dirname = os.path.dirname(out_file)
+    if not os.path.exists(dirname):
+        os.mkdir(dirname)
+    plt.savefig(out_file)
 
 
 def pre_selective(image_path):
@@ -59,7 +73,6 @@ def selective(image_path):
     # print('seg')
     # print(img)
 
-    
     img_lbl, regions = selectivesearch.selective_search(
         image_array,
         scale=SELECTIVESEARCH_SCALE,
@@ -75,16 +88,15 @@ def selective(image_path):
         # excluding regions smaller than 2000 pixels
         # print('size')
         # print(r['size'])
-        if r['size'] < 20*20:
+        if r['size'] < 15*15:
             continue
         # distorted rects
         x, y, w, h = r['rect']
-        if w / h > 1.5 or h / w > 1.5:
+        if w / h > 3 or h / w > 3:
             continue
         candidates.add(r['rect'])
 
     return post_selective(candidates)
-
 
 
 def post_selective(candidates):
@@ -93,7 +105,7 @@ def post_selective(candidates):
         return candidates
     print('aaaa')
     print(len(candidates))
-    
+
     filterd_candidates = candidates.copy()
     for c in candidates:
         x, y, w, h = c
@@ -115,10 +127,10 @@ def post_selective(candidates):
 
     print('bbb')
     print(len(filterd_candidates))
-    
     return filterd_candidates
-    
 
 if __name__ == "__main__":
-    img_path = 'example.jpg'
-    main(img_path)
+
+    files = glob.glob('data/images/*.jpg')
+    for image_path in files:
+        main(image_path)
