@@ -18,11 +18,12 @@ https://github.com/scikit-image/scikit-image/blob/master/skimage/segmentation/_f
 SELECTIVESEARCH_SCALE = 100  # 255.0*3  # 1 ~ 255 ?
 SELECTIVESEARCH_SIGMA = 2.2  # Gaussian filter
 SELECTIVESEARCH_MIN_SIZE = 10
+DELETE_SIMILR_INCLUDE = True
 
 
 def main(image_path):
     input_file_name = os.path.basename(image_path)
-    image_array = pre_selective(image_path)
+    image_array = pre_process(image_path)
 
     candidates = selective(image_path)
 
@@ -37,10 +38,13 @@ def main(image_path):
     # plt.show()
 
     out_file = "data/result/{0}.png".format(input_file_name)
-    out_file = "data/result/scale_{0}__sigma_{1}__minsize__{2}/{3}.png".format(
+
+    delete_similr = "__delete_similr" if DELETE_SIMILR_INCLUDE else ''
+    out_file = "data/result/scale_{0}__sigma_{1}__minsize__{2}{3}/{4}.png".format(
         SELECTIVESEARCH_SCALE,
         SELECTIVESEARCH_SIGMA,
         SELECTIVESEARCH_MIN_SIZE,
+        delete_similr,
         input_file_name
     )
     dirname = os.path.dirname(out_file)
@@ -49,7 +53,7 @@ def main(image_path):
     plt.savefig(out_file)
 
 
-def pre_selective(image_path):
+def pre_process(image_path):
     resize = (256, 256)
     image = Image.open(image_path)
     image = image.resize(resize, Image.ANTIALIAS)
@@ -61,7 +65,7 @@ def pre_selective(image_path):
 def selective(image_path):
     # loading lena image
 
-    image_array = pre_selective(image_path)
+    image_array = pre_process(image_path)
 
     # perform selective search
     # img = selectivesearch._generate_segments(
@@ -82,6 +86,12 @@ def selective(image_path):
 
     candidates = set()
     for r in regions:
+        print('size')
+        x, y, w, h = r['rect']
+        print(r['size'])
+        print(w*h)
+        print(r['size'] == w*h)
+        
         # excluding same rectangle (with different segments)
         if r['rect'] in candidates:
             continue
@@ -96,12 +106,12 @@ def selective(image_path):
             continue
         candidates.add(r['rect'])
 
-    return post_selective(candidates)
+    return post_process(candidates)
 
 
-def post_selective(candidates):
+def post_process(candidates):
 
-    if True:
+    if not DELETE_SIMILR_INCLUDE:
         return candidates
     print('aaaa')
     print(len(candidates))
@@ -114,13 +124,10 @@ def post_selective(candidates):
             if x == _x and y == _y and w == _w and h == _h:
                 continue
 
-            # print('exec')
-            # print(abs(x - _x))
-            # print(abs(y - _y))
-            # print(abs(w * h - _w * _h))
-            if abs(x - _x) < 50 and \
-               abs(y - _y) < 50 and \
-               abs(w * h - _w * _h) < 20*20:
+            if abs(x - _x) < 10 and \
+               abs(y - _y) < 10 and \
+               w * h - _w * _h < 30*30 and \
+               w * h - _w * _h > 0:
                 print('delete')
                 print((_x, _y, _w, _h))
                 filterd_candidates.discard((_x, _y, _w, _h))
@@ -129,6 +136,12 @@ def post_selective(candidates):
     print(len(filterd_candidates))
     return filterd_candidates
 
+def delete_min_size(candidates):
+    
+    filterd_candidates = candidates.copy()
+    
+    
+    
 if __name__ == "__main__":
 
     files = glob.glob('data/images/*.jpg')
